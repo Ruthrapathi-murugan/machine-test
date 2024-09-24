@@ -4,7 +4,7 @@ import React from 'react';
 const Dashboard = () => {
   return (
     <div className="container mt-5">
-      <h1 className="text-center">Welcome to Admin Panel for Machine-test</h1>
+      <h1 className="text-center">Welcome to   Admin Panel for Machine-test</h1>
     </div>
   );
 };
