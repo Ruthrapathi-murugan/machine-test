@@ -6,18 +6,18 @@ function NavigationBar() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // Clear all localStorage or sessionStorage data related to authentication
+    // Clear all localStorage data related to authentication
     localStorage.removeItem('token');
     localStorage.removeItem('authStatus');
-
-    // If you are using sessionStorage or any other state, clear that too
-    sessionStorage.clear(); // This will clear everything stored in sessionStorage
-
-    // Optionally clear any other cached data related to user session here
+    localStorage.removeItem('userName'); // Clear user name
+    sessionStorage.clear();
 
     // Redirect to the login page
-    navigate('/login'); // or navigate('/') if the login page is at '/'
+    navigate('/login');
   };
+
+  // Retrieve user name from localStorage
+  const userName = localStorage.getItem('userName');
 
   return (
     <Navbar bg="light" expand="lg">
@@ -30,6 +30,7 @@ function NavigationBar() {
             <Nav.Link as={Link} to="/employee-list">Employee List</Nav.Link>
           </Nav>
           <Nav>
+            {userName ? <span className="me-3">Hello, {userName}!</span> : null} {/* Display user name */}
             <Nav.Link onClick={handleLogout}>Logout</Nav.Link>
           </Nav>
         </Navbar.Collapse>
