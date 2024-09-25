@@ -83,6 +83,24 @@ function EmployeeList() {
     );
   });
 
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this employee?')) {
+      try {
+        await axios.delete(`${import.meta.env.VITE_BE_URL}/api/employees/${id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        // Remove the deleted employee from the state
+        setEmployees(employees.filter((employee) => employee._id !== id));
+      } catch (error) {
+        console.error('Error deleting employee:', error);
+        setError('Failed to delete employee.');
+      }
+    }
+  };
+  
   return (
     <div className="container mt-5">
       <h2>Employee List</h2>
@@ -121,12 +139,13 @@ function EmployeeList() {
             <tr key={employee._id}>
               <td>{index + 1}</td>
               <td>
-                <img
-                  src={employee.image} 
-                  alt="Employee" 
-                  style={{ width: '50px', height: '50px', objectFit: 'cover' }}
-                />
-              </td>
+  <img
+    src={employee.image || 'https://via.placeholder.com/50'} // Use a placeholder image if no image URL
+    alt="Employee"
+    style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+  />
+</td>
+
               <td>{employee.name}</td>
               <td>
                 <a href={`mailto:${employee.email}`}>{employee.email}</a>
@@ -136,6 +155,7 @@ function EmployeeList() {
               <td>{employee.gender}</td>
               <td>{employee.courses.join(', ')}</td>
               <td>{new Date(employee.createdAt).toLocaleDateString()}</td>
+
               <td>
                 <Link to={`/edit-employee/${employee._id}`} className="btn btn-warning btn-sm">
                   Edit
