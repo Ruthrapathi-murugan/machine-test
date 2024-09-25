@@ -1,5 +1,6 @@
 import React from 'react';
-import '../app.css'; // External CSS
+import './app.css';
+// External CSS
 
 function Home() {
   return (

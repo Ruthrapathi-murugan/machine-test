@@ -8,7 +8,8 @@ import Register from './components/Register';
 import CreateEmployee from './components/CreateEmployee';
 import EditEmployee from './components/EditEmployee';
 import Dashboard from './components/Dashboard';
-import '../app.css'; // External CSS
+import './app.css';
+
 
 
 function App() {
