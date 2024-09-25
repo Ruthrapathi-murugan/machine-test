@@ -1,5 +1,5 @@
 import React from 'react';
-import '../app.css';
+import './App.css'; // This is correct if the file is in the same folder
 
 
 function Home() {
