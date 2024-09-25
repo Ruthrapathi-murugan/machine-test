@@ -1,9 +1,14 @@
-import React from 'react'
-import { Navigate, useNavigate } from 'react-router-dom';
+import React from 'react';
+import '../app.css'; // External CSS
+
 function Home() {
   return (
-    <div>Home</div>
-  )
+    <div className="home-container">
+      <h1>Welcome to the Home Page</h1>
+      <p>This is a simple, clean homepage designed for a machine test.</p>
+      <button className="home-button">Explore More</button>
+    </div>
+  );
 }
 
-export default Home
+export default Home;
