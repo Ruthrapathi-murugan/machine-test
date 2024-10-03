@@ -6,7 +6,7 @@ function EditEmployee() {
   const { id } = useParams(); // Get employee ID from route params
   const navigate = useNavigate(); // Hook for navigation
   const [formData, setFormData] = useState({
-    name: '',
+    name: '', 
     email: '',
     mobile: '',
     designation: '',
@@ -16,7 +16,8 @@ function EditEmployee() {
   });
   const [existingImage, setExistingImage] = useState(null); // To store the existing image
   const [errors, setErrors] = useState({});
-  
+  const [loading, setLoading] = useState(false); // Loading state
+
   const designations = ['HR', 'Manager', 'Sales']; // Static dropdown values for designation
   const availableCourses = ['MCA', 'BCA', 'BSC']; // Static course checkbox values
 
@@ -24,21 +25,29 @@ function EditEmployee() {
   useEffect(() => {
     const fetchEmployee = async () => {
       try {
+        console.log('Fetching employee with ID:', id);
         const response = await axios.get(`${import.meta.env.VITE_BE_URL}/api/employees/${id}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         });
-        setFormData({
-          ...response.data,
-          courses: response.data.courses || [], // Ensure courses is an array
-        });
-        setExistingImage(response.data.image); // If there's an existing image
+        console.log('Fetched employee data:', response.data);
+        if (response.data) {
+          setFormData({
+            ...response.data,
+            courses: response.data.courses || [],
+          });
+          setExistingImage(response.data.image || '');
+        } else {
+          console.error('No employee data found for the provided ID');
+        }
       } catch (error) {
-        console.error('Error fetching employee:', error);
+        console.error('Error fetching employee:', error.message);
+        if (error.response) {
+          console.error('Error details:', error.response.data);
+        }
       }
     };
-
     fetchEmployee();
   }, [id]);
 
@@ -64,120 +73,116 @@ function EditEmployee() {
     const file = e.target.files[0];
     if (file && (file.type === 'image/jpeg' || file.type === 'image/png')) {
       setFormData((prev) => ({ ...prev, image: file }));
-      setErrors((prev) => ({ ...prev, image: '' })); // Clear previous file error
     } else {
-      setErrors((prev) => ({ ...prev, image: 'Only jpg/png files are allowed' }));
+      alert('Please select a valid image (JPEG or PNG)');
     }
   };
 
-  // Form validation
+  // Validate form inputs
   const validate = () => {
-    const newErrors = {};
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const mobilePattern = /^[0-9]{10}$/;
-
-    if (!formData.name) newErrors.name = 'Name is required';
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!emailPattern.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
-    }
-    if (!formData.mobile) {
-      newErrors.mobile = 'Mobile number is required';
-    } else if (!mobilePattern.test(formData.mobile)) {
-      newErrors.mobile = 'Mobile number must be 10 digits';
-    }
-    if (!formData.designation) newErrors.designation = 'Designation is required';
-    if (!formData.gender) newErrors.gender = 'Gender is required';
-    if (formData.courses.length === 0) newErrors.courses = 'At least one course must be selected';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const validationErrors = {};
+    if (!formData.name) validationErrors.name = 'Name is required';
+    if (!formData.email) validationErrors.email = 'Email is required';
+    if (!formData.mobile) validationErrors.mobile = 'Mobile is required';
+    if (!formData.designation) validationErrors.designation = 'Designation is required';
+    if (!formData.gender) validationErrors.gender = 'Gender is required';
+    if (formData.courses.length === 0) validationErrors.courses = 'At least one course is required';
+    return validationErrors;
   };
 
-  // Submit the form data
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validate()) return;
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
 
-    const data = new FormData();
-    Object.keys(formData).forEach((key) => {
-      if (key === 'courses') {
-        formData.courses.forEach((course) => data.append('courses', course));
-      } else {
-        data.append(key, formData[key]);
-      }
-    });
+    const formDataToSubmit = new FormData();
+    formDataToSubmit.append('name', formData.name);
+    formDataToSubmit.append('email', formData.email);
+    formDataToSubmit.append('mobile', formData.mobile);
+    formDataToSubmit.append('designation', formData.designation);
+    formDataToSubmit.append('gender', formData.gender);
+    formDataToSubmit.append('courses', JSON.stringify(formData.courses));
+    if (formData.image) {
+      formDataToSubmit.append('image', formData.image);
+    }
 
+    setLoading(true); // Start loading state
     try {
-      await axios.put(`${import.meta.env.VITE_BE_URL}/api/employees/${id}`, data, {
+      await axios.put(`${import.meta.env.VITE_BE_URL}/api/employees/${id}`, formDataToSubmit, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'multipart/form-data', // Necessary for file upload
+          'Content-Type': 'multipart/form-data',
         },
       });
-      navigate('/employees'); // Redirect to employee list after successful update
+      navigate('/employees'); // Redirect to the employees list
     } catch (error) {
       console.error('Error updating employee:', error);
-      setErrors({ submit: 'Failed to update employee. Please try again.' });
+      setErrors({ submit: 'Failed to update employee. Please try again.' }); // Set a submit error message
+    } finally {
+      setLoading(false); // End loading state
     }
   };
 
   return (
     <div className="container mt-5">
       <h2>Edit Employee</h2>
+      {loading && <div>Loading...</div>}
+      <form onSubmit={handleSubmit}>
+        {/* Display existing image */}
+        {existingImage && (
+  <div>
+    <img
+      src={existingImage}
+      alt="Existing Employee"
+      style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+    />
+  </div>
+)}
 
-      {/* Server-side error message */}
-      {errors.submit && <div className="alert alert-danger">{errors.submit}</div>}
-
-      <form onSubmit={handleSubmit} encType="multipart/form-data">
-        {/* Name */}
-        <div className="form-group mb-3">
-          <label>Name</label>
+        <div className="mb-3">
+          <label className="form-label">Name</label>
           <input
             type="text"
             name="name"
-            className={`form-control ${errors.name ? 'is-invalid' : ''}`}
             value={formData.name}
             onChange={handleChange}
+            className={`form-control ${errors.name ? 'is-invalid' : ''}`}
           />
           {errors.name && <div className="invalid-feedback">{errors.name}</div>}
         </div>
-
-        {/* Email */}
-        <div className="form-group mb-3">
-          <label>Email</label>
+        <div className="mb-3">
+          <label className="form-label">Email</label>
           <input
             type="email"
             name="email"
-            className={`form-control ${errors.email ? 'is-invalid' : ''}`}
             value={formData.email}
             onChange={handleChange}
+            className={`form-control ${errors.email ? 'is-invalid' : ''}`}
           />
           {errors.email && <div className="invalid-feedback">{errors.email}</div>}
         </div>
-
-        {/* Mobile */}
-        <div className="form-group mb-3">
-          <label>Mobile</label>
+        <div className="mb-3">
+          <label className="form-label">Mobile</label>
           <input
             type="text"
             name="mobile"
-            className={`form-control ${errors.mobile ? 'is-invalid' : ''}`}
             value={formData.mobile}
             onChange={handleChange}
+            className={`form-control ${errors.mobile ? 'is-invalid' : ''}`}
           />
           {errors.mobile && <div className="invalid-feedback">{errors.mobile}</div>}
         </div>
-
-        {/* Designation */}
-        <div className="form-group mb-3">
-          <label>Designation</label>
+        <div className="mb-3">
+          <label className="form-label">Designation</label>
           <select
             name="designation"
-            className={`form-control ${errors.designation ? 'is-invalid' : ''}`}
             value={formData.designation}
             onChange={handleChange}
+            className={`form-select ${errors.designation ? 'is-invalid' : ''}`}
           >
             <option value="">Select Designation</option>
             {designations.map((designation) => (
@@ -188,63 +193,47 @@ function EditEmployee() {
           </select>
           {errors.designation && <div className="invalid-feedback">{errors.designation}</div>}
         </div>
-
-        {/* Gender */}
-        <div className="form-group mb-3">
-          <label>Gender</label>
-          <div>
-            <input
-              type="radio"
-              name="gender"
-              value="Male"
-              checked={formData.gender === 'Male'}
-              onChange={handleChange}
-            /> Male
-            <input
-              type="radio"
-              name="gender"
-              value="Female"
-              checked={formData.gender === 'Female'}
-              onChange={handleChange}
-            /> Female
-          </div>
-          {errors.gender && <div className="text-danger">{errors.gender}</div>}
+        <div className="mb-3">
+          <label className="form-label">Gender</label>
+          <select
+            name="gender"
+            value={formData.gender}
+            onChange={handleChange}
+            className={`form-select ${errors.gender ? 'is-invalid' : ''}`}
+          >
+            <option value="">Select Gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+          {errors.gender && <div className="invalid-feedback">{errors.gender}</div>}
         </div>
-
-        {/* Courses */}
-        <div className="form-group mb-3">
-          <label>Courses</label>
-          <div>
-            {availableCourses.map((course) => (
-              <div key={course} className="form-check">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  value={course}
-                  onChange={handleCheckboxChange}
-                  checked={formData.courses.includes(course)}
-                />
-                <label className="form-check-label">{course}</label>
-              </div>
-            ))}
-          </div>
+        <div className="mb-3">
+          <label className="form-label">Courses</label>
+          {availableCourses.map((course) => (
+            <div key={course} className="form-check">
+              <input
+                type="checkbox"
+                value={course}
+                checked={formData.courses.includes(course)}
+                onChange={handleCheckboxChange}
+                className="form-check-input"
+              />
+              <label className="form-check-label">{course}</label>
+            </div>
+          ))}
           {errors.courses && <div className="text-danger">{errors.courses}</div>}
         </div>
-
-        {/* Image Upload */}
-        <div className="form-group mb-3">
-          <label>Upload Image (jpg/png)</label>
-          {existingImage && <p>Current Image: <img src={existingImage} alt="current" width="100" /></p>}
+        <div className="mb-3">
+          <label className="form-label">Upload Image</label>
           <input
             type="file"
-            className={`form-control ${errors.image ? 'is-invalid' : ''}`}
             onChange={handleFileChange}
+            className="form-control"
           />
-          {errors.image && <div className="invalid-feedback">{errors.image}</div>}
         </div>
-
-        {/* Submit Button */}
-        <button type="submit" className="btn btn-primary">Update</button>
+        <button type="submit" className="btn btn-primary">
+          Update Employee
+        </button>
       </form>
     </div>
   );
